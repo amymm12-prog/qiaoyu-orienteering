@@ -1,0 +1,13 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /orienteering_checkins/{doc} {
+      allow create: if request.resource.data.keys().hasAll(['team','type','device','clientTime'])
+                    && request.resource.data.team is string
+                    && request.resource.data.team.size() <= 40
+                    && request.resource.data.device is string;
+      allow read: if true;
+      allow update, delete: if false;
+    }
+  }
+}
