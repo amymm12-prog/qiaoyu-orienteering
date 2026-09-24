@@ -20,14 +20,14 @@
 <label>隊伍（每行一隊）</label><textarea id="teams" style="width:100%;min-height:110px;padding:10px" placeholder="第一隊&#10;第二隊&#10;第三隊"></textarea>
 <label>關卡（每行：代號,名稱,分數）</label><textarea id="cps" style="width:100%;min-height:150px;padding:10px" placeholder="A,司令台,10&#10;B,大樹,10&#10;C,圖書館,20"></textarea>
 <div class="row"><button id="save">儲存活動設定</button><button id="makeQR" class="secondary">產生 QR</button></div><p class="muted">QR 內容包含活動編號、關卡編號與防偽碼。</p></div>
-<div class="card"><h2>即時排名</h2><div class="row"><button id="refresh" class="secondary">重新整理</button><button id="export" class="secondary">匯出 CSV</button><button id="clearLocal" class="danger">清除此平板暫存</button></div><div id="rankings"></div></div></div>
+<div class="card"><h2>即時排名</h2><div class="row"><button id="refresh" class="secondary">重新整理</button><button id="export" class="secondary">匯出 CSV</button><button id="newRound" class="danger">🧹 清除本次成績／開始新一場</button><button id="clearLocal" class="secondary">清除此平板暫存</button></div><div id="rankings"></div></div></div>
 <div class="card"><h2>QR 列印區</h2><div id="qrs" class="muted">儲存活動後即可產生。</div></div>
 <div class="card"><h2>全班打卡紀錄</h2><div id="logs"></div></div>
 </section></main>
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
-import{getFirestore,doc,setDoc,getDoc,collection,addDoc,onSnapshot,query,orderBy,serverTimestamp,getDocs}from"https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+import{getFirestore,doc,setDoc,getDoc,collection,addDoc,onSnapshot,query,orderBy,serverTimestamp,getDocs,deleteDoc,writeBatch}from"https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 const cfg={apiKey:"AIzaSyD1BKU-zDW8clUwGXk-w0p1hcC6yqVf1zI",authDomain:"chia-yu.firebaseapp.com",projectId:"chia-yu",storageBucket:"chia-yu.firebasestorage.app",messagingSenderId:"337286066877",appId:"1:337286066877:web:8ada92b19946b788723dd4"};
 const db=getFirestore(initializeApp(cfg)),configRef=doc(db,"orienteering_config","main"),runs=collection(db,"orienteering_checkins");
 const $=s=>document.querySelector(s),esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -52,7 +52,9 @@ $("#makeQR").onclick=async()=>{const base=location.origin+location.pathname;cons
 function renderProgress(){const t=teamKey(),seen=new Set(logs.filter(x=>x.team===t&&x.type==="checkpoint").map(x=>x.checkpoint));$("#progress").innerHTML=config.checkpoints.map(c=>'<span class="pill">'+(seen.has(c.id)?"✓ ":"")+esc(c.id)+" "+esc(c.name)+'</span>').join("")}
 function renderLogs(){const f=logs.filter(x=>x.activityId===config.activityId||!x.activityId);$("#logs").innerHTML=f.length?f.map(x=>'<div class="item"><b>'+esc(x.team)+'</b> <span class="pill">'+esc(x.checkpoint||x.type)+'</span> <small>'+esc(x.clientTime||"")+'</small></div>').join(""):'<p class="muted">目前沒有紀錄</p>';const teams={};for(const x of f){teams[x.team]??={team:x.team,start:null,finish:null,score:0,seen:new Set()};const z=teams[x.team];if(x.type==="start")z.start=x.clientTime;if(x.type==="finish")z.finish=x.clientTime;if(x.type==="checkpoint"&&!z.seen.has(x.checkpoint)){z.seen.add(x.checkpoint);z.score+=config.checkpoints.find(c=>c.id===x.checkpoint)?.score||0}}const arr=Object.values(teams).map(z=>({...z,time:z.start&&z.finish?(new Date(z.finish)-new Date(z.start))/1000:null})).sort((a,b)=>b.score-a.score||(a.time??1e15)-(b.time??1e15));$("#rankings").innerHTML=arr.length?arr.map((z,i)=>'<div class="item rank"><b>'+(i+1)+'. '+esc(z.team)+'</b>｜'+z.score+' 分｜'+(z.time==null?"進行中":Math.round(z.time)+" 秒")+'</div>').join(""):'<p class="muted">尚無成績</p>';renderProgress()}
 onSnapshot(query(runs,orderBy("createdAt","desc")),s=>{$("#cloud").textContent="● Firebase 雲端已連線";$("#cloud").className="good status";logs=s.docs.map(d=>({id:d.id,...d.data()}));renderLogs()},e=>{$("#cloud").textContent="● 雲端權限/連線異常："+e.code;$("#cloud").className="warn status"});
-$("#refresh").onclick=()=>location.reload();$("#clearLocal").onclick=()=>{Object.keys(localStorage).filter(k=>k.startsWith("qy_start_")||k==="qy_queue").forEach(k=>localStorage.removeItem(k));alert("此平板暫存已清除")};
+$("#refresh").onclick=()=>location.reload();
+$("#newRound").onclick=async()=>{if(!confirm("確定要清除目前這個活動的所有打卡與排名嗎？\n此動作無法復原。"))return;const snap=await getDocs(runs);let batch=writeBatch(db),n=0;for(const d of snap.docs){const x=d.data();if(x.activityId===config.activityId||!x.activityId){batch.delete(d.ref);n++;if(n%450===0){await batch.commit();batch=writeBatch(db)}}}await batch.commit();Object.keys(localStorage).filter(k=>k.startsWith("qy_start_")||k==="qy_queue").forEach(k=>localStorage.removeItem(k));alert("已清除本次成績，可以開始新一場！")};
+$("#clearLocal").onclick=()=>{Object.keys(localStorage).filter(k=>k.startsWith("qy_start_")||k==="qy_queue").forEach(k=>localStorage.removeItem(k));alert("此平板暫存已清除")};
 $("#export").onclick=async()=>{const rows=[["team","checkpoint","type","clientTime","device"],...logs.map(x=>[x.team,x.checkpoint,x.type,x.clientTime,x.device])];const csv=rows.map(r=>r.map(v=>'"'+String(v??"").replaceAll('"','""')+'"').join(",")).join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+csv],{type:"text/csv"}));a.download="僑育定向越野.csv";a.click()};
 $("#team").onchange=renderProgress;
 </script></body></html>
