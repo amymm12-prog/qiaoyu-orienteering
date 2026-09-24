@@ -1,40 +1,58 @@
 <!doctype html>
-<html lang="zh-Hant">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>僑育校園定向越野</title>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>僑育校園定向越野</title><meta name="theme-color" content="#1769e0">
 <style>
-:root{font-family:system-ui,-apple-system,"Noto Sans TC",sans-serif;color:#17324d;background:#f3f7fb}
-*{box-sizing:border-box}body{margin:0}.wrap{max-width:920px;margin:auto;padding:20px}.hero{background:#fff;border-radius:20px;padding:24px;box-shadow:0 8px 30px #1232}.row{display:flex;gap:12px;flex-wrap:wrap}.card{background:#fff;border-radius:16px;padding:18px;margin-top:16px;box-shadow:0 5px 18px #1231;flex:1;min-width:260px}
-button,input,select{font:inherit;padding:12px;border-radius:10px;border:1px solid #b9c8d6}button{background:#1769e0;color:white;border:0;font-weight:700;cursor:pointer}.secondary{background:#52667a}.danger{background:#b42318}.big{font-size:1.08rem;padding:14px 20px}.hidden{display:none}.ok{color:#087443;font-weight:700}.warn{color:#a15c00}.muted{color:#65788a}.log{max-height:320px;overflow:auto}.item{border-bottom:1px solid #e6edf3;padding:10px 0}.pill{display:inline-block;background:#eaf2ff;border-radius:999px;padding:5px 10px;margin:3px}h1{margin:.2em 0}video{width:100%;border-radius:14px;background:#111;max-height:360px}
-</style>
-</head>
-<body><main class="wrap">
-<section class="hero"><h1>🏃 僑育校園定向越野</h1><p class="muted">全班 QR 電子打卡｜Firebase 雲端同步</p><div id="cloud" class="warn">● 正在連接雲端…</div></section>
-<section class="row">
-<div class="card"><h2>學生端</h2><label>隊伍名稱</label><input id="team" placeholder="例如：第一隊" style="width:100%;margin:8px 0"><div class="row"><button id="start" class="big">起點開始</button><button id="scan" class="big">掃描關卡 QR</button></div><p id="timer">尚未開始</p><video id="video" class="hidden" playsinline></video><button id="stopScan" class="secondary hidden">停止掃描</button><div id="msg"></div></div>
-<div class="card"><h2>老師端</h2><div class="row"><button id="refresh" class="secondary">重新整理</button><button id="export" class="secondary">匯出 CSV</button></div><div id="logs" class="log"><p class="muted">等待雲端資料…</p></div></div>
+:root{font-family:system-ui,-apple-system,"Noto Sans TC",sans-serif;color:#17324d;background:#eef4f8}*{box-sizing:border-box}body{margin:0}.wrap{max-width:1050px;margin:auto;padding:16px}.hero,.card{background:#fff;border-radius:20px;padding:20px;box-shadow:0 6px 22px #17324d18;margin-bottom:16px}.tabs,.row{display:flex;gap:10px;flex-wrap:wrap}.tab{background:#dce8f4;color:#17324d}.tab.on,button{background:#1769e0;color:#fff}button,input,select{font:inherit;border-radius:11px;padding:12px;border:1px solid #b7c7d6}button{border:0;font-weight:750;cursor:pointer}.secondary{background:#52677c}.danger{background:#b42318}.good{color:#087443;font-weight:750}.warn{color:#a15c00}.muted{color:#687b8d}.hidden{display:none!important}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}.big{font-size:1.1rem;padding:15px 20px}.timer{font-size:2rem;font-weight:800;margin:12px 0}.pill{display:inline-block;background:#eaf2ff;border-radius:999px;padding:5px 10px;margin:3px}.item{padding:10px 0;border-bottom:1px solid #e7edf2}.rank{font-size:1.05rem}.qrbox{display:inline-block;background:#fff;padding:10px;border:1px solid #ddd;margin:8px;text-align:center}.qrbox img{width:180px;height:180px}label{display:block;margin:8px 0 4px}input,select{width:100%}video{width:100%;max-height:380px;border-radius:14px;background:#111}.topline{display:flex;justify-content:space-between;gap:10px;align-items:center}.status{font-size:.92rem}
+</style></head><body><main class="wrap">
+<section class="hero"><div class="topline"><div><h1>🏃 僑育校園定向越野</h1><div id="cloud" class="warn status">● 連接 Firebase…</div></div><button id="install" class="secondary hidden">安裝到平板</button></div></section>
+<div class="tabs"><button class="tab on" data-page="student">學生端</button><button class="tab" data-page="teacher">老師端</button></div>
+<section id="student" class="card">
+<h2>學生挑戰</h2><div id="activityInfo" class="muted">讀取活動設定中…</div>
+<label>選擇隊伍</label><select id="team"></select>
+<div class="row" style="margin-top:12px"><button id="start" class="big">▶ 起點開始</button><button id="scan" class="big">▣ 掃描關卡 QR</button><button id="finish" class="secondary big">🏁 完成</button></div>
+<div id="timer" class="timer">尚未開始</div><div id="progress"></div><div id="msg"></div>
+<video id="video" class="hidden" playsinline></video><button id="stopScan" class="secondary hidden">停止掃描</button>
 </section>
-</main>
+<section id="teacher" class="hidden">
+<div class="grid"><div class="card"><h2>活動設定</h2>
+<label>活動名稱</label><input id="actName" value="僑育校園定向越野">
+<label>時間限制（分鐘）</label><input id="limit" type="number" min="1" value="40">
+<label>隊伍（每行一隊）</label><textarea id="teams" style="width:100%;min-height:110px;padding:10px" placeholder="第一隊&#10;第二隊&#10;第三隊"></textarea>
+<label>關卡（每行：代號,名稱,分數）</label><textarea id="cps" style="width:100%;min-height:150px;padding:10px" placeholder="A,司令台,10&#10;B,大樹,10&#10;C,圖書館,20"></textarea>
+<div class="row"><button id="save">儲存活動設定</button><button id="makeQR" class="secondary">產生 QR</button></div><p class="muted">QR 內容包含活動編號、關卡編號與防偽碼。</p></div>
+<div class="card"><h2>即時排名</h2><div class="row"><button id="refresh" class="secondary">重新整理</button><button id="export" class="secondary">匯出 CSV</button><button id="clearLocal" class="danger">清除此平板暫存</button></div><div id="rankings"></div></div></div>
+<div class="card"><h2>QR 列印區</h2><div id="qrs" class="muted">儲存活動後即可產生。</div></div>
+<div class="card"><h2>全班打卡紀錄</h2><div id="logs"></div></div>
+</section></main>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
 <script type="module">
-import {initializeApp} from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
-import {getFirestore,collection,addDoc,onSnapshot,query,orderBy,serverTimestamp,getDocs} from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
-const firebaseConfig={apiKey:"AIzaSyD1BKU-zDW8clUwGXk-w0p1hcC6yqVf1zI",authDomain:"chia-yu.firebaseapp.com",projectId:"chia-yu",storageBucket:"chia-yu.firebasestorage.app",messagingSenderId:"337286066877",appId:"1:337286066877:web:8ada92b19946b788723dd4"};
-const app=initializeApp(firebaseConfig),db=getFirestore(app),runs=collection(db,"orienteering_checkins");
-const cloud=document.querySelector("#cloud"),team=document.querySelector("#team"),msg=document.querySelector("#msg"),timer=document.querySelector("#timer"),video=document.querySelector("#video"),stopScan=document.querySelector("#stopScan");
-let started=Number(localStorage.getItem("qy_start")||0),stream=null,scanLoop=null;
+import{initializeApp}from"https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
+import{getFirestore,doc,setDoc,getDoc,collection,addDoc,onSnapshot,query,orderBy,serverTimestamp,getDocs}from"https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+const cfg={apiKey:"AIzaSyD1BKU-zDW8clUwGXk-w0p1hcC6yqVf1zI",authDomain:"chia-yu.firebaseapp.com",projectId:"chia-yu",storageBucket:"chia-yu.firebasestorage.app",messagingSenderId:"337286066877",appId:"1:337286066877:web:8ada92b19946b788723dd4"};
+const db=getFirestore(initializeApp(cfg)),configRef=doc(db,"orienteering_config","main"),runs=collection(db,"orienteering_checkins");
+const $=s=>document.querySelector(s),esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let config={activityId:"QY-"+new Date().getFullYear(),name:"僑育校園定向越野",limit:40,teams:["第一隊","第二隊"],checkpoints:[]},logs=[],stream,scanLoop;
 const device=localStorage.qy_device||(localStorage.qy_device=crypto.randomUUID());
-function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-setInterval(()=>{if(started)timer.textContent="已進行 "+Math.floor((Date.now()-started)/1000)+" 秒"},1000);
-async function write(type,checkpoint=""){const t=team.value.trim();if(!t){msg.innerHTML='<p class="warn">請先輸入隊伍名稱</p>';return}await addDoc(runs,{team:t,type,checkpoint,device,clientTime:new Date().toISOString(),createdAt:serverTimestamp()});msg.innerHTML='<p class="ok">✓ 已同步：'+esc(checkpoint||type)+'</p>'}
-document.querySelector("#start").onclick=async()=>{started=Date.now();localStorage.qy_start=started;await write("start","START")};
-function parseQR(raw){try{const u=new URL(raw);return u.searchParams.get("checkpoint")||u.searchParams.get("cp")||raw}catch{return raw}}
-async function beginScan(){if(!("BarcodeDetector"in window)){msg.innerHTML='<p class="warn">此瀏覽器不支援直接掃碼，請使用 Chrome/Edge，或用平板相機開啟 QR 連結。</p>';return}const det=new BarcodeDetector({formats:["qr_code"]});stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});video.srcObject=stream;video.classList.remove("hidden");stopScan.classList.remove("hidden");await video.play();scanLoop=setInterval(async()=>{try{const b=await det.detect(video);if(b[0]){const cp=parseQR(b[0].rawValue);endScan();await write("checkpoint",cp)}}catch{}},400)}
-function endScan(){clearInterval(scanLoop);stream?.getTracks().forEach(t=>t.stop());video.classList.add("hidden");stopScan.classList.add("hidden")}
-document.querySelector("#scan").onclick=beginScan;stopScan.onclick=endScan;
-const q=query(runs,orderBy("createdAt","desc"));onSnapshot(q,s=>{cloud.textContent="● Firebase 雲端已連線";cloud.className="ok";render(s.docs.map(d=>({id:d.id,...d.data()})))},e=>{cloud.textContent="● 雲端權限尚未開放："+e.code;cloud.className="warn"});
-function render(a){document.querySelector("#logs").innerHTML=a.length?a.map(x=>'<div class="item"><b>'+esc(x.team)+'</b> <span class="pill">'+esc(x.checkpoint||x.type)+'</span><br><small>'+esc(x.clientTime||"")+'</small></div>').join(""):'<p class="muted">目前沒有打卡紀錄</p>'}
-document.querySelector("#refresh").onclick=()=>location.reload();
-document.querySelector("#export").onclick=async()=>{const s=await getDocs(q),rows=[["team","checkpoint","type","clientTime","device"],...s.docs.map(d=>{const x=d.data();return[x.team,x.checkpoint,x.type,x.clientTime,x.device]})];const csv=rows.map(r=>r.map(v=>'"'+String(v??"").replaceAll('"','""')+'"').join(",")).join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+csv],{type:"text/csv"}));a.download="orienteering.csv";a.click()};
-const p=new URLSearchParams(location.search);if(p.get("team"))team.value=p.get("team");if(p.get("checkpoint")){setTimeout(()=>write("checkpoint",p.get("checkpoint")),600)}
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));b.classList.add("on");["student","teacher"].forEach(x=>$("#"+x).classList.toggle("hidden",x!==b.dataset.page))});
+function teamKey(){return $("#team").value} function startKey(){return "qy_start_"+config.activityId+"_"+teamKey()}
+function renderConfig(){ $("#activityInfo").innerHTML="<b>"+esc(config.name)+"</b>｜限時 "+config.limit+" 分鐘｜"+config.checkpoints.length+" 關";$("#team").innerHTML=config.teams.map(t=>'<option>'+esc(t)+'</option>').join("");$("#actName").value=config.name;$("#limit").value=config.limit;$("#teams").value=config.teams.join("\n");$("#cps").value=config.checkpoints.map(c=>[c.id,c.name,c.score].join(",")).join("\n");renderProgress()}
+async function loadConfig(){try{const s=await getDoc(configRef);if(s.exists())config=s.data();renderConfig()}catch(e){$("#activityInfo").textContent="活動設定尚未開放："+e.code}}
+await loadConfig();
+async function punch(type,checkpoint=""){const team=teamKey();if(!team)return show("請先選隊伍",false);const payload={activityId:config.activityId,team,type,checkpoint,device,clientTime:new Date().toISOString(),createdAt:serverTimestamp()};try{await addDoc(runs,payload);show("✓ 已同步："+(checkpoint||type),true)}catch(e){const q=JSON.parse(localStorage.qy_queue||"[]");q.push(payload);localStorage.qy_queue=JSON.stringify(q);show("目前離線，已存入平板，恢復網路後會自動同步",false)}renderProgress()}
+async function syncQueue(){if(!navigator.onLine)return;const q=JSON.parse(localStorage.qy_queue||"[]");if(!q.length)return;let left=[];for(const x of q){try{await addDoc(runs,{...x,createdAt:serverTimestamp()})}catch{left.push(x)}}localStorage.qy_queue=JSON.stringify(left)}
+window.addEventListener("online",syncQueue);setInterval(syncQueue,8000);syncQueue();
+function show(t,ok){$("#msg").innerHTML='<p class="'+(ok?"good":"warn")+'">'+esc(t)+'</p>'}
+$("#start").onclick=async()=>{localStorage.setItem(startKey(),Date.now());await punch("start","START")};$("#finish").onclick=()=>punch("finish","FINISH");
+setInterval(()=>{const s=Number(localStorage.getItem(startKey())||0);$("#timer").textContent=s?"已進行 "+Math.floor((Date.now()-s)/1000)+" 秒":"尚未開始"},1000);
+function parseQR(raw){try{const x=JSON.parse(raw);if(x.a!==config.activityId)return{err:"這不是本活動的 QR"};const cp=config.checkpoints.find(c=>c.id===x.c&&c.token===x.t);return cp?{cp}:{err:"QR 防偽驗證失敗"}}catch{return{err:"無法辨識此 QR"}}}
+async function beginScan(){if(!("BarcodeDetector"in window))return show("此瀏覽器不支援內建掃碼，請改用最新版 Chrome/Edge。",false);const det=new BarcodeDetector({formats:["qr_code"]});try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});$("#video").srcObject=stream;$("#video").classList.remove("hidden");$("#stopScan").classList.remove("hidden");await $("#video").play();scanLoop=setInterval(async()=>{try{const b=await det.detect($("#video"));if(b[0]){const r=parseQR(b[0].rawValue);if(r.err)return show(r.err,false);endScan();await punch("checkpoint",r.cp.id)}}catch{}},400)}catch{show("無法開啟相機，請允許相機權限。",false)}}
+function endScan(){clearInterval(scanLoop);stream?.getTracks().forEach(t=>t.stop());$("#video").classList.add("hidden");$("#stopScan").classList.add("hidden")}$("#scan").onclick=beginScan;$("#stopScan").onclick=endScan;
+$("#save").onclick=async()=>{const cps=$("#cps").value.split("\n").map(x=>x.trim()).filter(Boolean).map((x,i)=>{const [id,name,score]=x.split(",").map(v=>v.trim());const old=config.checkpoints.find(c=>c.id===id);return{id:id||String(i+1),name:name||id,score:Number(score)||10,token:old?.token||crypto.randomUUID().slice(0,8)}});config={activityId:config.activityId||"QY-"+Date.now(),name:$("#actName").value.trim()||"僑育校園定向越野",limit:Number($("#limit").value)||40,teams:$("#teams").value.split("\n").map(x=>x.trim()).filter(Boolean),checkpoints:cps,updatedAt:new Date().toISOString()};try{await setDoc(configRef,config);renderConfig();alert("活動設定已儲存到雲端")}catch(e){alert("Firestore 規則尚未允許活動設定："+e.code)}};
+$("#makeQR").onclick=async()=>{const base=location.origin+location.pathname;const all=[{id:"START",name:"起點",token:"START"},...config.checkpoints,{id:"FINISH",name:"終點",token:"FINISH"}];$("#qrs").innerHTML="";for(const c of all){const payload=JSON.stringify({a:config.activityId,c:c.id,t:c.token});const box=document.createElement("div");box.className="qrbox";box.innerHTML="<b>"+esc(c.id)+"｜"+esc(c.name)+"</b><br>";const img=document.createElement("img");box.append(img);$("#qrs").append(box);await QRCode.toDataURL(payload,{width:360,margin:2}).then(u=>img.src=u)}};
+function renderProgress(){const t=teamKey(),seen=new Set(logs.filter(x=>x.team===t&&x.type==="checkpoint").map(x=>x.checkpoint));$("#progress").innerHTML=config.checkpoints.map(c=>'<span class="pill">'+(seen.has(c.id)?"✓ ":"")+esc(c.id)+" "+esc(c.name)+'</span>').join("")}
+function renderLogs(){const f=logs.filter(x=>x.activityId===config.activityId||!x.activityId);$("#logs").innerHTML=f.length?f.map(x=>'<div class="item"><b>'+esc(x.team)+'</b> <span class="pill">'+esc(x.checkpoint||x.type)+'</span> <small>'+esc(x.clientTime||"")+'</small></div>').join(""):'<p class="muted">目前沒有紀錄</p>';const teams={};for(const x of f){teams[x.team]??={team:x.team,start:null,finish:null,score:0,seen:new Set()};const z=teams[x.team];if(x.type==="start")z.start=x.clientTime;if(x.type==="finish")z.finish=x.clientTime;if(x.type==="checkpoint"&&!z.seen.has(x.checkpoint)){z.seen.add(x.checkpoint);z.score+=config.checkpoints.find(c=>c.id===x.checkpoint)?.score||0}}const arr=Object.values(teams).map(z=>({...z,time:z.start&&z.finish?(new Date(z.finish)-new Date(z.start))/1000:null})).sort((a,b)=>b.score-a.score||(a.time??1e15)-(b.time??1e15));$("#rankings").innerHTML=arr.length?arr.map((z,i)=>'<div class="item rank"><b>'+(i+1)+'. '+esc(z.team)+'</b>｜'+z.score+' 分｜'+(z.time==null?"進行中":Math.round(z.time)+" 秒")+'</div>').join(""):'<p class="muted">尚無成績</p>';renderProgress()}
+onSnapshot(query(runs,orderBy("createdAt","desc")),s=>{$("#cloud").textContent="● Firebase 雲端已連線";$("#cloud").className="good status";logs=s.docs.map(d=>({id:d.id,...d.data()}));renderLogs()},e=>{$("#cloud").textContent="● 雲端權限/連線異常："+e.code;$("#cloud").className="warn status"});
+$("#refresh").onclick=()=>location.reload();$("#clearLocal").onclick=()=>{Object.keys(localStorage).filter(k=>k.startsWith("qy_start_")||k==="qy_queue").forEach(k=>localStorage.removeItem(k));alert("此平板暫存已清除")};
+$("#export").onclick=async()=>{const rows=[["team","checkpoint","type","clientTime","device"],...logs.map(x=>[x.team,x.checkpoint,x.type,x.clientTime,x.device])];const csv=rows.map(r=>r.map(v=>'"'+String(v??"").replaceAll('"','""')+'"').join(",")).join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+csv],{type:"text/csv"}));a.download="僑育定向越野.csv";a.click()};
+$("#team").onchange=renderProgress;
 </script></body></html>
