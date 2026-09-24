@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>僑育校園定向越野</title>
+<style>
+:root{font-family:system-ui,-apple-system,"Noto Sans TC",sans-serif;color:#17324d;background:#f3f7fb}
+*{box-sizing:border-box}body{margin:0}.wrap{max-width:920px;margin:auto;padding:20px}.hero{background:#fff;border-radius:20px;padding:24px;box-shadow:0 8px 30px #1232}.row{display:flex;gap:12px;flex-wrap:wrap}.card{background:#fff;border-radius:16px;padding:18px;margin-top:16px;box-shadow:0 5px 18px #1231;flex:1;min-width:260px}
+button,input,select{font:inherit;padding:12px;border-radius:10px;border:1px solid #b9c8d6}button{background:#1769e0;color:white;border:0;font-weight:700;cursor:pointer}.secondary{background:#52667a}.danger{background:#b42318}.big{font-size:1.08rem;padding:14px 20px}.hidden{display:none}.ok{color:#087443;font-weight:700}.warn{color:#a15c00}.muted{color:#65788a}.log{max-height:320px;overflow:auto}.item{border-bottom:1px solid #e6edf3;padding:10px 0}.pill{display:inline-block;background:#eaf2ff;border-radius:999px;padding:5px 10px;margin:3px}h1{margin:.2em 0}video{width:100%;border-radius:14px;background:#111;max-height:360px}
+</style>
+</head>
+<body><main class="wrap">
+<section class="hero"><h1>🏃 僑育校園定向越野</h1><p class="muted">全班 QR 電子打卡｜Firebase 雲端同步</p><div id="cloud" class="warn">● 正在連接雲端…</div></section>
+<section class="row">
+<div class="card"><h2>學生端</h2><label>隊伍名稱</label><input id="team" placeholder="例如：第一隊" style="width:100%;margin:8px 0"><div class="row"><button id="start" class="big">起點開始</button><button id="scan" class="big">掃描關卡 QR</button></div><p id="timer">尚未開始</p><video id="video" class="hidden" playsinline></video><button id="stopScan" class="secondary hidden">停止掃描</button><div id="msg"></div></div>
+<div class="card"><h2>老師端</h2><div class="row"><button id="refresh" class="secondary">重新整理</button><button id="export" class="secondary">匯出 CSV</button></div><div id="logs" class="log"><p class="muted">等待雲端資料…</p></div></div>
+</section>
+</main>
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
+import {getFirestore,collection,addDoc,onSnapshot,query,orderBy,serverTimestamp,getDocs} from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+const firebaseConfig={apiKey:"AIzaSyD1BKU-zDW8clUwGXk-w0p1hcC6yqVf1zI",authDomain:"chia-yu.firebaseapp.com",projectId:"chia-yu",storageBucket:"chia-yu.firebasestorage.app",messagingSenderId:"337286066877",appId:"1:337286066877:web:8ada92b19946b788723dd4"};
+const app=initializeApp(firebaseConfig),db=getFirestore(app),runs=collection(db,"orienteering_checkins");
+const cloud=document.querySelector("#cloud"),team=document.querySelector("#team"),msg=document.querySelector("#msg"),timer=document.querySelector("#timer"),video=document.querySelector("#video"),stopScan=document.querySelector("#stopScan");
+let started=Number(localStorage.getItem("qy_start")||0),stream=null,scanLoop=null;
+const device=localStorage.qy_device||(localStorage.qy_device=crypto.randomUUID());
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+setInterval(()=>{if(started)timer.textContent="已進行 "+Math.floor((Date.now()-started)/1000)+" 秒"},1000);
+async function write(type,checkpoint=""){const t=team.value.trim();if(!t){msg.innerHTML='<p class="warn">請先輸入隊伍名稱</p>';return}await addDoc(runs,{team:t,type,checkpoint,device,clientTime:new Date().toISOString(),createdAt:serverTimestamp()});msg.innerHTML='<p class="ok">✓ 已同步：'+esc(checkpoint||type)+'</p>'}
+document.querySelector("#start").onclick=async()=>{started=Date.now();localStorage.qy_start=started;await write("start","START")};
+function parseQR(raw){try{const u=new URL(raw);return u.searchParams.get("checkpoint")||u.searchParams.get("cp")||raw}catch{return raw}}
+async function beginScan(){if(!("BarcodeDetector"in window)){msg.innerHTML='<p class="warn">此瀏覽器不支援直接掃碼，請使用 Chrome/Edge，或用平板相機開啟 QR 連結。</p>';return}const det=new BarcodeDetector({formats:["qr_code"]});stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});video.srcObject=stream;video.classList.remove("hidden");stopScan.classList.remove("hidden");await video.play();scanLoop=setInterval(async()=>{try{const b=await det.detect(video);if(b[0]){const cp=parseQR(b[0].rawValue);endScan();await write("checkpoint",cp)}}catch{}},400)}
+function endScan(){clearInterval(scanLoop);stream?.getTracks().forEach(t=>t.stop());video.classList.add("hidden");stopScan.classList.add("hidden")}
+document.querySelector("#scan").onclick=beginScan;stopScan.onclick=endScan;
+const q=query(runs,orderBy("createdAt","desc"));onSnapshot(q,s=>{cloud.textContent="● Firebase 雲端已連線";cloud.className="ok";render(s.docs.map(d=>({id:d.id,...d.data()})))},e=>{cloud.textContent="● 雲端權限尚未開放："+e.code;cloud.className="warn"});
+function render(a){document.querySelector("#logs").innerHTML=a.length?a.map(x=>'<div class="item"><b>'+esc(x.team)+'</b> <span class="pill">'+esc(x.checkpoint||x.type)+'</span><br><small>'+esc(x.clientTime||"")+'</small></div>').join(""):'<p class="muted">目前沒有打卡紀錄</p>'}
+document.querySelector("#refresh").onclick=()=>location.reload();
+document.querySelector("#export").onclick=async()=>{const s=await getDocs(q),rows=[["team","checkpoint","type","clientTime","device"],...s.docs.map(d=>{const x=d.data();return[x.team,x.checkpoint,x.type,x.clientTime,x.device]})];const csv=rows.map(r=>r.map(v=>'"'+String(v??"").replaceAll('"','""')+'"').join(",")).join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+csv],{type:"text/csv"}));a.download="orienteering.csv";a.click()};
+const p=new URLSearchParams(location.search);if(p.get("team"))team.value=p.get("team");if(p.get("checkpoint")){setTimeout(()=>write("checkpoint",p.get("checkpoint")),600)}
+</script></body></html>
