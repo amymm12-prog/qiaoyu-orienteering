@@ -21,7 +21,7 @@
 <label>關卡（每行：代號,名稱,分數）</label><textarea id="cps" style="width:100%;min-height:150px;padding:10px" placeholder="A,司令台,10&#10;B,大樹,10&#10;C,圖書館,20"></textarea>
 <div class="row"><button id="save">儲存活動設定</button><button id="makeQR" class="secondary">產生 QR</button></div><p class="muted">QR 內容包含活動編號、關卡編號與防偽碼。</p></div>
 <div class="card"><h2>即時排名</h2><div class="row"><button id="refresh" class="secondary">重新整理</button><button id="export" class="secondary">匯出 CSV</button><button id="newRound" class="danger">🧹 清除本次成績／開始新一場</button><button id="clearLocal" class="secondary">清除此平板暫存</button></div><div id="rankings"></div></div></div>
-<div class="card qrprint"><div class="topline"><h2>QR 列印區</h2><button id="printQR" class="secondary">🖨️ 一鍵列印關卡牌</button></div><div id="qrs" class="muted">儲存活動後即可產生。</div></div>
+<div class="card"><div class="topline"><h2>學生入口 QR</h2><button id="entryQRBtn" class="secondary">產生學生入口 QR</button></div><div id="entryQR" class="muted">讓學生掃描後直接進入學生端。</div></div><div class="card qrprint"><div class="topline"><h2>QR 列印區</h2><button id="printQR" class="secondary">🖨️ 一鍵列印關卡牌</button></div><div id="qrs" class="muted">儲存活動後即可產生。</div></div>
 <div class="card"><h2>全班打卡紀錄</h2><div id="logs"></div></div>
 </section></main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -33,7 +33,7 @@ const db=getFirestore(initializeApp(cfg)),configRef=doc(db,"orienteering_config"
 const $=s=>document.querySelector(s),esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 let config={activityId:"QY-"+new Date().getFullYear(),name:"僑育校園定向越野",limit:40,teams:["第一隊","第二隊"],checkpoints:[]},logs=[],stream,scanLoop;
 const device=localStorage.qy_device||(localStorage.qy_device=crypto.randomUUID());
-document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));b.classList.add("on");["student","teacher"].forEach(x=>$("#"+x).classList.toggle("hidden",x!==b.dataset.page))});
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));b.classList.add("on");["student","teacher"].forEach(x=>$("#"+x).classList.toggle("hidden",x!==b.dataset.page))});if(new URLSearchParams(location.search).get("mode")==="student"){$(".tab[data-page=student]").click()}
 function teamKey(){return $("#team").value} function startKey(){return "qy_start_"+config.activityId+"_"+teamKey()}
 function renderConfig(){ $("#activityInfo").innerHTML="<b>"+esc(config.name)+"</b>｜限時 "+config.limit+" 分鐘｜"+config.checkpoints.length+" 關";$("#team").innerHTML=config.teams.map(t=>'<option>'+esc(t)+'</option>').join("");$("#actName").value=config.name;$("#limit").value=config.limit;$("#teams").value=config.teams.join("\n");$("#cps").value=config.checkpoints.map(c=>[c.id,c.name,c.score].join(",")).join("\n");renderProgress()}
 async function loadConfig(){try{const s=await getDoc(configRef);if(s.exists())config=s.data();renderConfig()}catch(e){$("#activityInfo").textContent="活動設定尚未開放："+e.code}}
@@ -56,5 +56,5 @@ $("#refresh").onclick=()=>location.reload();
 $("#newRound").onclick=async()=>{if(!confirm("確定要清除目前這個活動的所有打卡與排名嗎？\n此動作無法復原。"))return;const snap=await getDocs(runs);let batch=writeBatch(db),n=0;for(const d of snap.docs){const x=d.data();if(x.activityId===config.activityId||!x.activityId){batch.delete(d.ref);n++;if(n%450===0){await batch.commit();batch=writeBatch(db)}}}await batch.commit();Object.keys(localStorage).filter(k=>k.startsWith("qy_start_")||k==="qy_queue").forEach(k=>localStorage.removeItem(k));alert("已清除本次成績，可以開始新一場！")};
 $("#clearLocal").onclick=()=>{Object.keys(localStorage).filter(k=>k.startsWith("qy_start_")||k==="qy_queue").forEach(k=>localStorage.removeItem(k));alert("此平板暫存已清除")};
 $("#export").onclick=async()=>{const rows=[["team","checkpoint","type","clientTime","device"],...logs.map(x=>[x.team,x.checkpoint,x.type,x.clientTime,x.device])];const csv=rows.map(r=>r.map(v=>'"'+String(v??"").replaceAll('"','""')+'"').join(",")).join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+csv],{type:"text/csv"}));a.download="僑育定向越野.csv";a.click()};
-$("#printQR").onclick=()=>{if(!$("#qrs .qrbox"))return alert("請先按「產生 QR」");window.print()};$("#team").onchange=renderProgress;
+$("#entryQRBtn").onclick=()=>{const url=location.origin+location.pathname+"?mode=student";$("#entryQR").innerHTML="<div class=\"qrbox\"><b>學生入口</b><br><div id=\"entryCanvas\"></div><p style=\"max-width:240px;word-break:break-all;font-size:12px\">"+esc(url)+"</p></div>";new QRCode($("#entryCanvas"),{text:url,width:220,height:220,correctLevel:QRCode.CorrectLevel.M})};$("#printQR").onclick=()=>{if(!$("#qrs .qrbox"))return alert("請先按「產生 QR」");window.print()};$("#team").onchange=renderProgress;
 </script></body></html>
