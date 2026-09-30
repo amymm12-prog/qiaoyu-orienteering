@@ -22,7 +22,7 @@
 <div class="row"><button id="save">儲存活動設定</button><button id="makeQR" class="secondary">產生 QR</button></div><p class="muted">QR 內容包含活動編號、關卡編號與防偽碼。</p></div>
 <div class="card"><h2>即時排名</h2><div class="row"><button id="refresh" class="secondary">重新整理</button><button id="export" class="secondary">匯出 CSV</button><button id="newRound" class="danger">🧹 清除本次成績／開始新一場</button><button id="clearLocal" class="secondary">清除此平板暫存</button></div><div id="rankings"></div></div></div>
 <div class="card"><div class="topline"><h2>學生入口 QR</h2><button id="entryQRBtn" class="secondary">產生學生入口 QR</button></div><div id="entryQR" class="muted">讓學生掃描後直接進入學生端。</div></div><div class="card qrprint"><div class="topline"><h2>QR 列印區</h2><button id="printQR" class="secondary">🖨️ 一鍵列印關卡牌</button></div><div id="qrs" class="muted">儲存活動後即可產生。</div></div>
-<div class="card"><h2>全班打卡紀錄</h2><div id="logs"></div></div>
+<div class="card"><details><summary style="cursor:pointer;font-size:1.2em;font-weight:700;padding:6px 0">📋 查看詳細打卡紀錄</summary><p class="muted">需要查詢各隊實際掃描關卡與時間時再展開。</p><div id="logs"></div></details></div>
 </section></main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script><script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script type="module">
